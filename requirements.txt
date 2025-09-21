@@ -3,3 +3,4 @@ agno
 sqlalchemy
 google-genai
 streamlit
+firecrawl-py
