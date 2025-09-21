@@ -96,7 +96,7 @@ def get_newsletter_agent(model_id: str = DEFAULT_MODEL) -> Agent:
             {Properly attributed sources with links}
         """),
         markdown=True,
-        add_datetime_to_instructions=True,
+        add_datetime_to_instructions=True,   # ✅ supported in your version
     )
 
 def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qdr:w") -> Dict[str, Any]:
