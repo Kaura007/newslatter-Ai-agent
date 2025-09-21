@@ -29,15 +29,15 @@ if not GOOGLE_API_KEY:
 os.makedirs("tmp", exist_ok=True)
 
 # Newsletter Research Agent: Handles web searching and content extraction using Firecrawl
-newsletter_agent = Agent(
-    model=Gemini(id="gemini-1.5-flash", api_key=GOOGLE_API_KEY),
-    tools=[FirecrawlTools(api_key=FIRECRAWL_API_KEY)],
-    description="You are an elite research assistant specializing in discovering and extracting high-quality content for compelling newsletters.",
-    instructions="Use firecrawl_search to find recent articles about the given topic. Create a comprehensive newsletter with proper attribution and citations.",
-    markdown=True,
-    show_tool_calls=True,
-    add_datetime_to_instructions=True
-)
+try:
+    newsletter_agent = Agent(
+        model=Gemini(id="gemini-1.5-flash", api_key=GOOGLE_API_KEY)
+    )
+    print("Agent created successfully!")
+except Exception as e:
+    print(f"Error creating agent: {e}")
+    # Fallback: create a simple function-based approach
+    newsletter_agent = None
 
 def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qdr:w") -> Dict[str, Any]:
     """
@@ -56,6 +56,13 @@ def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qd
         RuntimeError: If newsletter generation fails
     """
     try:
+        if newsletter_agent is None:
+            # Fallback response when agent creation fails
+            return {
+                "content": f"# Newsletter Generator Error\n\nUnable to initialize the newsletter agent. Please check your API keys and try again.\n\nRequested topic: {topic}",
+                "messages": []
+            }
+        
         # Include search parameters in the topic query since we can't modify FirecrawlTools parameters directly
         enhanced_topic = f"{topic}. Please search for recent articles (limit: {search_limit}, time range: {time_range}) and create a comprehensive newsletter."
         
