@@ -3,6 +3,7 @@ from textwrap import dedent
 from typing import Dict, AsyncIterator, Optional, List, Any
 from agno.agent import Agent
 from agno.models.google import Gemini
+from datetime import datetime, timedelta  # Added this import
 # from agno.storage.sqlite import SqliteStorage  # Storage not available in this version
 from agno.utils.log import logger
 import os
