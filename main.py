@@ -3,7 +3,7 @@ from textwrap import dedent
 from typing import Dict, AsyncIterator, Optional, List, Any
 from agno.agent import Agent
 from agno.models.google import Gemini
-from agno.storage.sqlite import SqliteStorage
+from agno.storage.agent.sqlite import SqliteAgentStorage  # Updated import
 from agno.utils.log import logger
 import os
 from agno.utils.pprint import pprint_run_response
@@ -142,7 +142,7 @@ newsletter_agent = Agent(
     # Ensure database directory exists
     # os.makedirs("tmp", exist_ok=True)
 
-    storage=SqliteStorage(
+    storage=SqliteAgentStorage(  # Updated class name
         table_name="newsletter_agent",
         db_file="tmp/newsletter_agent.db",
     )
