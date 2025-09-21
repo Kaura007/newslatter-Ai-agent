@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 from main import NewsletterGenerator  # Assuming NewsletterGenerator is updated to use Gemini
-from agno.storage.agent.sqlite import SqliteAgentStorage  # Updated import
+# from agno.storage.sqlite import SqliteStorage  # Not needed in app.py, only imported for reference
 import os
 from dotenv import load_dotenv
 
