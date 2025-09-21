@@ -1,9 +1,7 @@
 import streamlit as st
-import random
-from main import NewsletterGenerator  # Assuming NewsletterGenerator is updated to use Gemini
-# from agno.storage.sqlite import SqliteStorage  # Not needed in app.py, only imported for reference
 import os
 from dotenv import load_dotenv
+from main import NewsletterGenerator  # now safe with fallback logic
 
 # Load environment variables
 load_dotenv()
@@ -38,16 +36,14 @@ st.markdown("""
 
 # Title and description
 st.title("📰 AI Newsletter Generator with Firecrawl 🔥")
-st.markdown("""
-Generate professional newsletters on any topic using Gemini AI, Agno, and Firecrawl.
-""")
+st.markdown("Generate professional newsletters on any topic using Gemini AI, Agno, and Firecrawl.")
 
 # Example topics
 example_topics = [
-        "What happened in the world of AI this week?",
-        "What are the latest trends in AI?",
-        "Tell the Recent Model Releases",
-        "Recap of Google I/O 2025",
+    "What happened in the world of AI this week?",
+    "What are the latest trends in AI?",
+    "Tell the Recent Model Releases",
+    "Recap of Google I/O 2025",
 ]
 
 # Sidebar for API keys and settings
@@ -59,7 +55,6 @@ with st.sidebar:
         type="password",
         help="Get your API key from https://firecrawl.dev"
     )
-    # Change: Input for Google API Key
     google_api_key = st.text_input(
         "Google API Key (for Gemini)",
         value=os.getenv("GOOGLE_API_KEY", ""),
@@ -67,12 +62,10 @@ with st.sidebar:
         help="Your Google API key for Gemini"
     )
 
-    # Update environment variables with user input
     if firecrawl_api_key:
         os.environ["FIRECRAWL_API_KEY"] = firecrawl_api_key
     if google_api_key:
         os.environ["GOOGLE_API_KEY"] = google_api_key
-
 
     st.markdown("---")
     st.markdown("### 📚 Example Topics")
@@ -80,7 +73,7 @@ with st.sidebar:
         if st.button(topic, key=topic):
             st.session_state.topic = topic
 
-# Main content area
+# Main input
 topic = st.text_input(
     "What would you like to generate a newsletter about?",
     value=st.session_state.get("topic", ""),
@@ -88,16 +81,9 @@ topic = st.text_input(
     key="topic_input"
 )
 
-
 col1, col2 = st.columns(2)
 with col1:
-    search_limit = st.number_input(
-        "Number of Articles",
-        min_value=1,
-        max_value=10,
-        value=5,
-        help="Maximum number of articles to search and analyze"
-    )
+    search_limit = st.number_input("Number of Articles", min_value=1, max_value=10, value=5)
 with col2:
     time_range = st.selectbox(
         "Time Range",
@@ -109,56 +95,42 @@ with col2:
             ("Past year", "qdr:y")
         ],
         format_func=lambda x: x[0],
-        index=2,  # Default to "Past week"
-        help="Time range for article search"
+        index=2,
     )
 
-# Generate button
+# Generate function
 def generate_newsletter():
     if not topic:
         st.error("Please enter a topic or select one from the examples.")
         return
-    # Change: Check for Google API key
     elif not firecrawl_api_key or not google_api_key:
         st.error("Please provide both API keys in the sidebar.")
         return
 
     with st.spinner("Generating your newsletter..."):
         try:
-            # Convert the topic to a URL-safe string for use in session_id
             url_safe_topic = topic.lower().replace(" ", "-")
-
-            # Initialize the newsletter generator
-            
-            # Generate the newsletter using main function
             response = NewsletterGenerator(
                 topic=topic,
                 search_limit=search_limit,
-                time_range=time_range[1]  # Get the tbs value from the tuple
+                time_range=time_range[1]
             )
 
-            # Display the complete newsletter
             st.markdown("### 📝 Generated Newsletter")
             st.markdown(response.content)
 
-            # Add download button
             st.download_button(
                 label="📥 Download Newsletter",
                 data=response.content,
                 file_name=f"newsletter-{url_safe_topic}.md",
                 mime="text/markdown"
             )
-
         except Exception as e:
             st.error(f"An error occurred while generating the newsletter: {str(e)}")
 
 # Footer
 st.markdown("---")
-st.markdown("""
-<div style='text-align: center'>
-    <p>Built with ❤️ using Streamlit and Gemini AI</p>
-</div>
-""", unsafe_allow_html=True) 
+st.markdown("<div style='text-align: center'><p>Built with ❤️ using Streamlit and Gemini AI</p></div>", unsafe_allow_html=True)
 
 if st.button("Generate Newsletter", type="primary"):
     generate_newsletter()
