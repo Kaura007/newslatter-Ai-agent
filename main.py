@@ -134,31 +134,44 @@ def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qd
         }.get(time_range, "recent")
         
         enhanced_topic = f"""
-        URGENT: Search for the most recent news about: {topic}
+        SEARCH TASK: Find recent articles about {topic}
         
+        You MUST use the firecrawl_search function with these exact parameters:
+        
+        1. FIRST SEARCH (Breaking news):
+           firecrawl_search(
+               query="{topic} breaking news",
+               tbs="{time_range}",
+               limit={search_limit},
+               formats=["markdown", "links"]
+           )
+        
+        2. SECOND SEARCH (Latest developments):
+           firecrawl_search(
+               query="{topic} latest news 2024",
+               tbs="{time_range}",
+               limit={search_limit},
+               formats=["markdown", "links"]
+           )
+        
+        3. THIRD SEARCH (Recent announcements):
+           firecrawl_search(
+               query="{topic} recent developments",
+               tbs="{time_range}",
+               limit={search_limit},
+               formats=["markdown", "links"]
+           )
+        
+        TIME FILTER: {time_range} = {time_context}
         TODAY'S DATE: {today.strftime('%Y-%m-%d')}
-        SEARCH TIMEFRAME: {time_context}
         
-        CRITICAL INSTRUCTIONS:
-        1. Use firecrawl_search with these exact search queries:
-           - "{topic} {today.strftime('%B %Y')}" (current month/year)
-           - "{topic} breaking news {today.strftime('%Y-%m-%d')}"
-           - "{topic} latest news today"
-           - "{topic} recent developments {today.strftime('%Y')}"
+        REQUIREMENTS:
+        - Only include articles from the specified timeframe: {time_context}
+        - Each article MUST include: [Article Title](full-url)
+        - Include publication date when available
+        - If no recent articles found, explicitly state the search timeframe used
         
-        2. ONLY include articles with publication dates from {time_context}
-        3. If you find articles older than the specified timeframe, IGNORE them
-        4. Search news websites like: Reuters, AP News, TechCrunch, BBC, CNN, industry-specific news sites
-        5. Look for articles with timestamps showing they were published recently
-        
-        6. For each article found, verify the publication date and ONLY include if it matches the timeframe
-        7. Include the FULL URL link for every article: [Title](complete-url)
-        8. Format each source as: "Published on [DATE] - [Article Title](URL)"
-        
-        If no recent articles are found in the specified timeframe, explicitly state:
-        "No articles found for {topic} in the {time_context}. Searching for slightly older content..."
-        
-        SEARCH MULTIPLE TIMES with different keywords to ensure comprehensive recent coverage.
+        Create a newsletter with the search results, ensuring all articles are from {time_context}.
         """
         
         response = newsletter_agent.run(enhanced_topic)
