@@ -36,12 +36,7 @@ newsletter_agent = Agent(
     ),
     tools=[
         FirecrawlTools(
-            search=True,
-            formats=["markdown", "links"],
-            search_params={
-                "limit": 2,
-                "tbs": "qdr:w",
-            },
+            api_key=FIRECRAWL_API_KEY,
         ),
     ],
     description=dedent("""\
