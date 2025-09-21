@@ -1,12 +1,12 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from main import NewsletterGenerator  # now safe with fallback logic
+from main import NewsletterGenerator
 
 # Load environment variables
 load_dotenv()
 
-# Set page config
+# Page config
 st.set_page_config(
     page_title="AI Newsletter Generator",
     page_icon="📰",
@@ -34,7 +34,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Title and description
+# Title
 st.title("📰 AI Newsletter Generator with Firecrawl 🔥")
 st.markdown("Generate professional newsletters on any topic using Gemini AI, Agno, and Firecrawl.")
 
@@ -46,7 +46,7 @@ example_topics = [
     "Recap of Google I/O 2025",
 ]
 
-# Sidebar for API keys and settings
+# Sidebar API keys
 with st.sidebar:
     st.header("🔑 API Keys")
     firecrawl_api_key = st.text_input(
@@ -73,7 +73,7 @@ with st.sidebar:
         if st.button(topic, key=topic):
             st.session_state.topic = topic
 
-# Main input
+# Topic input
 topic = st.text_input(
     "What would you like to generate a newsletter about?",
     value=st.session_state.get("topic", ""),
@@ -116,29 +116,21 @@ def generate_newsletter():
                 time_range=time_range[1]
             )
 
-            # Handle dict or object
             content = response.get("content", "") if isinstance(response, dict) else getattr(response, "content", str(response))
 
             if not content:
                 st.error("No newsletter content was generated.")
                 return
 
-            # Show newsletter
             st.markdown("### 📝 Generated Newsletter")
             st.markdown(content)
 
-            # Download button
             st.download_button(
                 label="📥 Download Newsletter",
                 data=content,
                 file_name=f"newsletter-{url_safe_topic}.md",
                 mime="text/markdown"
             )
-
-            # Optional: Warning if fallback was used
-            if "gemini-1.5-flash" in str(response):
-                st.warning("⚠️ The app fell back to `gemini-1.5-flash` because `gemini-1.5-pro` is not available for your key.")
-
         except Exception as e:
             st.error(f"An error occurred while generating the newsletter: {str(e)}")
 
