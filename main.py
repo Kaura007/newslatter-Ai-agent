@@ -35,32 +35,36 @@ try:
         tools=[FirecrawlTools(api_key=FIRECRAWL_API_KEY)],
         description="You are NewsletterResearch-X, an elite research assistant specializing in discovering and extracting high-quality, recent content for compelling newsletters.",
         instructions=dedent("""\
-        CRITICAL REQUIREMENTS:
-        1. ALWAYS use firecrawl_search to find the most recent articles (within the last 24-48 hours when possible)
-        2. Search for articles published in the current week or month only
-        3. MUST include the full source URL link for every article mentioned
-        4. Focus on breaking news, recent announcements, and fresh developments
-        5. Verify article dates and prioritize the newest content available
+        You are an elite newsletter research assistant. Your primary job is to find the most recent articles about given topics.
         
-        SEARCH STRATEGY:
-        - Use current date-specific search terms (e.g., "topic 2024", "topic this week", "topic recent news")
-        - Search multiple times with different keywords to get comprehensive recent coverage
-        - Look for news sites, official announcements, press releases, and industry publications
-        - Cross-reference multiple sources to ensure accuracy and recency
+        CRITICAL: You MUST use the firecrawl_search function with specific time parameters to get recent articles.
         
-        NEWSLETTER FORMAT:
-        Create a newsletter with:
-        - Compelling headline with current date context
-        - Brief executive summary of recent developments
-        - 3-5 main stories with full article links
-        - Quick updates section with bullet points and links
-        - "Sources & Further Reading" section with all URLs
+        SEARCH INSTRUCTIONS:
+        1. Use firecrawl_search with these parameters:
+           - query: include the topic + current date terms
+           - tbs: "qdr:d" for past day, "qdr:w" for past week, etc.
+           - limit: number of articles to find
         
-        LINK REQUIREMENTS:
-        - Every article reference MUST include [Article Title](full-url)
-        - Include publication date when available
-        - Use format: "According to [Source Name](url), published on [date]..."
-        - Always provide clickable links for credibility and verification
+        2. ALWAYS search with time constraints:
+           - For breaking news: tbs="qdr:h" (past hour)
+           - For daily news: tbs="qdr:d" (past 24 hours)  
+           - For weekly roundups: tbs="qdr:w" (past week)
+        
+        3. MULTIPLE SEARCHES: Perform several searches with different keywords:
+           - "{topic} breaking news"
+           - "{topic} latest news 2024" 
+           - "{topic} recent developments"
+           - "{topic} today news"
+        
+        4. LINK FORMAT: Every article MUST include [Article Title](full-url)
+        
+        5. DATE VERIFICATION: Only include articles that show recent publication dates
+        
+        Example search calls you should make:
+        - firecrawl_search(query="AI news breaking", tbs="qdr:d", limit=5)
+        - firecrawl_search(query="artificial intelligence latest 2024", tbs="qdr:w", limit=5)
+        
+        If you don't find recent articles, explicitly state the search timeframe used and results found.
         """),
         markdown=True,
         show_tool_calls=True,
@@ -113,18 +117,48 @@ def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qd
             "qdr:y": "past year"
         }.get(time_range, "recent")
         
+        # Create a more specific and urgent prompt for recent content
+        from datetime import datetime, timedelta
+        
+        # Get current date for context
+        today = datetime.now()
+        yesterday = today - timedelta(days=1)
+        week_ago = today - timedelta(days=7)
+        
+        time_context = {
+            "qdr:h": f"past hour (since {(today - timedelta(hours=1)).strftime('%Y-%m-%d %H:00')})",
+            "qdr:d": f"past 24 hours (since {yesterday.strftime('%Y-%m-%d')})", 
+            "qdr:w": f"past week (since {week_ago.strftime('%Y-%m-%d')})",
+            "qdr:m": f"past month (since {(today - timedelta(days=30)).strftime('%Y-%m-%d')})",
+            "qdr:y": f"past year (since {(today - timedelta(days=365)).strftime('%Y-%m-%d')})"
+        }.get(time_range, "recent")
+        
         enhanced_topic = f"""
-        Research and create a comprehensive newsletter about: {topic}
+        URGENT: Search for the most recent news about: {topic}
         
-        REQUIREMENTS:
-        - Find {search_limit} of the most recent articles from the {time_context}
-        - Focus ONLY on news published in the last few days if possible
-        - Each article mention MUST include the full clickable link: [Title](URL)
-        - Include publication dates when available
-        - Search for breaking news, recent announcements, and latest developments
-        - Prioritize authoritative news sources, official press releases, and industry publications
+        TODAY'S DATE: {today.strftime('%Y-%m-%d')}
+        SEARCH TIMEFRAME: {time_context}
         
-        Please search multiple times with different keywords to ensure you get the most recent and comprehensive coverage.
+        CRITICAL INSTRUCTIONS:
+        1. Use firecrawl_search with these exact search queries:
+           - "{topic} {today.strftime('%B %Y')}" (current month/year)
+           - "{topic} breaking news {today.strftime('%Y-%m-%d')}"
+           - "{topic} latest news today"
+           - "{topic} recent developments {today.strftime('%Y')}"
+        
+        2. ONLY include articles with publication dates from {time_context}
+        3. If you find articles older than the specified timeframe, IGNORE them
+        4. Search news websites like: Reuters, AP News, TechCrunch, BBC, CNN, industry-specific news sites
+        5. Look for articles with timestamps showing they were published recently
+        
+        6. For each article found, verify the publication date and ONLY include if it matches the timeframe
+        7. Include the FULL URL link for every article: [Title](complete-url)
+        8. Format each source as: "Published on [DATE] - [Article Title](URL)"
+        
+        If no recent articles are found in the specified timeframe, explicitly state:
+        "No articles found for {topic} in the {time_context}. Searching for slightly older content..."
+        
+        SEARCH MULTIPLE TIMES with different keywords to ensure comprehensive recent coverage.
         """
         
         response = newsletter_agent.run(enhanced_topic)
