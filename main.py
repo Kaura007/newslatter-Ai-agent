@@ -2,7 +2,7 @@ import json
 from textwrap import dedent
 from typing import Dict, AsyncIterator, Optional, List, Any
 from agno.agent import Agent
-from agno.models.google import Gemini  # Change: Import Gemini instead of Nebius
+from agno.models.google import Gemini
 from agno.storage.sqlite import SqliteStorage
 from agno.utils.log import logger
 import os
@@ -17,18 +17,21 @@ load_dotenv()
 
 # Get API keys from environment variables
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")  # Change: Get Google API key
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Validate API keys
 if not FIRECRAWL_API_KEY:
     raise ValueError("FIRECRAWL_API_KEY environment variable is not set. Please set it in your .env file or environment.")
-if not GOOGLE_API_KEY:  # Change: Validate Google API key
+if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY environment variable is not set. Please set it in your .env file or environment.")
+
+# Add this line to create the 'tmp' directory if it doesn't exist
+os.makedirs("tmp", exist_ok=True)
 
 # Newsletter Research Agent: Handles web searching and content extraction using Firecrawl
 newsletter_agent = Agent(
-    model=Gemini(  # Change: Use Gemini model
-        id="gemini-1.5-pro",  # Specify the Gemini model ID, e.g., gemini-1.5-pro
+    model=Gemini(
+        id="gemini-1.5-pro",
         api_key=GOOGLE_API_KEY
     ),
     tools=[
