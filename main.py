@@ -25,12 +25,12 @@ DEFAULT_MODEL = "gemini-1.5-pro"
 FALLBACK_MODEL = "gemini-1.5-flash"
 
 def get_newsletter_agent(model_id: str = DEFAULT_MODEL) -> Agent:
-    """Initialize a newsletter research agent in safe mode (basic args only)."""
+    """Initialize a newsletter research agent (safe version, no unsupported args)."""
     return Agent(
         model=Gemini(id=model_id, api_key=GOOGLE_API_KEY),
         tools=[FirecrawlTools(api_key=FIRECRAWL_API_KEY)],
-        description="You are NewsletterResearch-X, an elite assistant for discovering and extracting content for newsletters.",
-        markdown=True,   # ✅ supported everywhere
+        description="You are NewsletterResearch-X, an assistant for discovering and extracting content for newsletters.",
+        markdown=True,
     )
 
 def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qdr:w") -> Dict[str, Any]:
@@ -43,14 +43,13 @@ def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qd
             logger.warning(f"Falling back to {FALLBACK_MODEL} due to: {e}")
             agent = get_newsletter_agent(FALLBACK_MODEL)
 
-        # Update Firecrawl search params (safe)
+        # Update Firecrawl search params (if supported by tool)
         if hasattr(agent.tools[0], "search_params"):
             agent.tools[0].search_params.update({
                 "limit": search_limit,
                 "tbs": time_range
             })
 
-        # Run the agent
         response = agent.run(topic)
         logger.info("Newsletter generated successfully")
         return response
