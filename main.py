@@ -1,58 +1,177 @@
-import os
-from dotenv import load_dotenv
+import json
+from textwrap import dedent
+from typing import Dict, AsyncIterator, Optional, List, Any
 from agno.agent import Agent
 from agno.models.google import Gemini
-from agno.tools.firecrawl import FirecrawlTools
+# from agno.storage.sqlite import SqliteStorage  # Storage not available in this version
 from agno.utils.log import logger
-from typing import Dict, Any
+import os
+from agno.utils.pprint import pprint_run_response
+from dotenv import load_dotenv
+import asyncio
+from agno.tools.firecrawl import FirecrawlTools
+
 
 # Load environment variables
 load_dotenv()
 
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+# Get API keys from environment variables
 FIRECRAWL_API_KEY = os.getenv("FIRECRAWL_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-if not GOOGLE_API_KEY:
-    raise ValueError("GOOGLE_API_KEY is not set.")
+# Validate API keys
 if not FIRECRAWL_API_KEY:
-    raise ValueError("FIRECRAWL_API_KEY is not set.")
+    raise ValueError("FIRECRAWL_API_KEY environment variable is not set. Please set it in your .env file or environment.")
+if not GOOGLE_API_KEY:
+    raise ValueError("GOOGLE_API_KEY environment variable is not set. Please set it in your .env file or environment.")
 
-# Ensure tmp directory exists
+# Add this line to create the 'tmp' directory if it doesn't exist
 os.makedirs("tmp", exist_ok=True)
 
-# Default and fallback models
-DEFAULT_MODEL = "gemini-1.5-pro"
-FALLBACK_MODEL = "gemini-1.5-flash"
+# Newsletter Research Agent: Handles web searching and content extraction using Firecrawl
+newsletter_agent = Agent(
+    model=Gemini(
+        id="gemini-1.5-flash",  # Changed to free model
+        api_key=GOOGLE_API_KEY
+    ),
+    tools=[
+        FirecrawlTools(
+            api_key=FIRECRAWL_API_KEY,
+        ),
+    ],
+    description=dedent("""\
+    You are NewsletterResearch-X, an elite research assistant specializing in discovering
+    and extracting high-quality content for compelling newsletters. Your expertise includes:
 
-def get_newsletter_agent(model_id: str = DEFAULT_MODEL) -> Agent:
-    """Initialize a newsletter research agent (no search_params dependency)."""
-    return Agent(
-        model=Gemini(id=model_id, api_key=GOOGLE_API_KEY),
-        tools=[FirecrawlTools(api_key=FIRECRAWL_API_KEY)],
-        description="You are NewsletterResearch-X, an assistant for discovering and extracting content for newsletters.",
-        markdown=True,
-    )
+    - Finding authoritative and trending sources across multiple domains
+    - Extracting and synthesizing content efficiently while maintaining accuracy
+    - Evaluating content credibility, relevance, and potential impact
+    - Identifying diverse perspectives, expert opinions, and emerging trends
+    - Ensuring comprehensive topic coverage with balanced viewpoints
+    - Maintaining journalistic integrity and ethical reporting standards
+    - Creating engaging narratives that resonate with target audiences
+    - Adapting content style and depth based on audience expertise level\
+    """),
+    instructions=dedent("""\
+    1. Initial Research & Discovery:
+       - Use firecrawl_search to find recent articles about the topic
+       - Search for authoritative sources, expert opinions, and industry leaders
+       - Look for industry reports, market analysis, and academic research
+       - Focus on the most recent and relevant content (prioritize last 7 days)
+       - Identify key stakeholders and their perspectives
+       - Look for contrasting viewpoints to ensure balanced coverage
+
+    2. Content Analysis & Processing:
+       - Extract key insights, trends, and patterns from each article
+       - Identify important quotes, statistics, and data points
+       - Evaluate source credibility, expertise, and potential biases
+       - Assess the impact and implications of the information
+       - Look for connections between different pieces of information
+       - Identify gaps in coverage that need additional research
+
+    3. Content Organization & Structure:
+       - Group related information by theme and significance
+       - Identify main story angles and supporting narratives
+       - Create a logical flow of information
+       - Prioritize content based on relevance and impact
+       - Ensure balanced coverage of different perspectives
+       - Structure content for optimal reader engagement
+
+    4. Newsletter Creation:
+       - Follow the exact template structure below
+       - Create compelling headlines that capture attention
+       - Write engaging introductions that set context
+       - Develop clear, concise, and informative sections
+       - Include relevant quotes and statistics to support key points
+       - Maintain consistent tone and style throughout
+       - Use markdown formatting effectively
+       - Ensure proper attribution for all content
+       - Include actionable insights and practical takeaways
+       - Add relevant links for further reading
+
+    Guidelines:
+    - Always use firecrawl_search to gather comprehensive information
+    - Prioritize recent (within 7 days) and authoritative sources
+    - Maintain proper attribution and citation for all content
+    - Focus on actionable insights and practical implications
+    - Keep content engaging, accessible, and well-structured
+    - Use markdown formatting consistently and effectively
+    - Ensure proper formatting and structure throughout
+    - Replace all {placeholder} fields with specific, relevant content
+    - Create specific, topic-relevant titles for sections
+    - Include diverse perspectives and balanced viewpoints
+    - Add value through analysis and expert insights
+    - Maintain journalistic integrity and ethical standards
+    - STRICTLY follow the expected_output format
+                                       
+    """),
+    expected_output=dedent("""\
+        # ${Compelling Subject Line}
+
+        ## Welcome
+        {Engaging hook and context}
+
+        ## ${Main Story}
+        {Key insights and analysis}
+        {Expert quotes and statistics}
+
+        ## Featured Content
+        {Deeper exploration}
+        {Real-world examples}
+
+        ## Quick Updates
+        {Actionable insights}
+        {Expert recommendations}
+
+        ## This Week's Highlights
+        - {Notable update 1}
+        - {Important news 2}
+        - {Key development 3}
+
+        ## Sources & Further Reading
+        {Properly attributed sources with links}
+    """),
+    markdown=True,
+    show_tool_calls=True,
+    add_datetime_to_instructions=True,
+    # Ensure database directory exists
+    # os.makedirs("tmp", exist_ok=True)
+
+    # storage=SqliteStorage(  # Storage not available in this version
+    #     table_name="newsletter_agent",
+    #     db_file="tmp/newsletter_agent.db",
+    # )
+)
 
 def NewsletterGenerator(topic: str, search_limit: int = 5, time_range: str = "qdr:w") -> Dict[str, Any]:
-    """Generate a newsletter based on topic and search parameters."""
+    """
+    Generate a newsletter based on the given topic and search parameters.
+    
+    Args:
+        topic (str): The topic to generate the newsletter about
+        search_limit (int): Maximum number of articles to search and analyze
+        time_range (str): Time range for article search (e.g., "qdr:w" for past week)
+    
+    Returns:
+        Dict[str, Any]: Processed newsletter content with structured metadata
+    
+    Raises:
+        ValueError: If configuration validation fails
+        RuntimeError: If newsletter generation fails
+    """
     try:
-        # Try pro model first, fallback to flash
-        try:
-            agent = get_newsletter_agent(DEFAULT_MODEL)
-        except Exception as e:
-            logger.warning(f"Falling back to {FALLBACK_MODEL} due to: {e}")
-            agent = get_newsletter_agent(FALLBACK_MODEL)
-
-        # 🚨 Removed `.search_params.update()` since it's None in your version
-        # Instead, pass context into the agent run call
-        query = f"{topic} (limit={search_limit}, time_range={time_range})"
-
-        response = agent.run(query)
-        logger.info("Newsletter generated successfully")
+        # Include search parameters in the topic query since we can't modify FirecrawlTools parameters directly
+        enhanced_topic = f"{topic}. Please search for recent articles (limit: {search_limit}, time range: {time_range}) and create a comprehensive newsletter."
+        
+        response = newsletter_agent.run(enhanced_topic)
+        logger.info('Newsletter generated successfully')
         return response
+    except ValueError as ve:
+        logger.error('Configuration error: %s', ve)
+        raise
     except Exception as e:
-        logger.error("Unexpected error in newsletter generation: %s", e, exc_info=True)
-        raise RuntimeError(f"Newsletter generation failed: {e}") from e
+        logger.error('Unexpected error in newsletter generation: %s', e, exc_info=True)
+        raise RuntimeError('Newsletter generation failed: %s' % e) from e
 
 if __name__ == "__main__":
-    print(NewsletterGenerator("Latest developments in AI"))
+    NewsletterGenerator("Latest developments in AI")
