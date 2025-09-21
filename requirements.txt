@@ -1,5 +1,5 @@
-streamlit
 python-dotenv
-agno>=2.1.0  # or try a specific newer version
+agno
 sqlalchemy
 google-genai
+streamlit
