@@ -31,7 +31,7 @@ os.makedirs("tmp", exist_ok=True)
 # Newsletter Research Agent: Handles web searching and content extraction using Firecrawl
 newsletter_agent = Agent(
     model=Gemini(
-        id="gemini-1.5-flash",  # Changed to free model
+        id="gemini-1.5-flash",  # Free model
         api_key=GOOGLE_API_KEY
     ),
     tools=[
@@ -133,11 +133,9 @@ newsletter_agent = Agent(
     """),
     markdown=True,
     show_tool_calls=True,
-    add_datetime_to_instructions=True,
-    # Ensure database directory exists
-    # os.makedirs("tmp", exist_ok=True)
-
-    # storage=SqliteStorage(  # Storage not available in this version
+    add_datetime_to_instructions=True
+    # Storage is not available in this version of agno
+    # storage=SqliteStorage(
     #     table_name="newsletter_agent",
     #     db_file="tmp/newsletter_agent.db",
     # )
