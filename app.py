@@ -116,15 +116,29 @@ def generate_newsletter():
                 time_range=time_range[1]
             )
 
-            st.markdown("### 📝 Generated Newsletter")
-            st.markdown(response.content)
+            # Handle dict or object
+            content = response.get("content", "") if isinstance(response, dict) else getattr(response, "content", str(response))
 
+            if not content:
+                st.error("No newsletter content was generated.")
+                return
+
+            # Show newsletter
+            st.markdown("### 📝 Generated Newsletter")
+            st.markdown(content)
+
+            # Download button
             st.download_button(
                 label="📥 Download Newsletter",
-                data=response.content,
+                data=content,
                 file_name=f"newsletter-{url_safe_topic}.md",
                 mime="text/markdown"
             )
+
+            # Optional: Warning if fallback was used
+            if "gemini-1.5-flash" in str(response):
+                st.warning("⚠️ The app fell back to `gemini-1.5-flash` because `gemini-1.5-pro` is not available for your key.")
+
         except Exception as e:
             st.error(f"An error occurred while generating the newsletter: {str(e)}")
 
